@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Uploadcare Photo Collage</title>
     <script src="https://ucarecdn.com/libs/widget/3.x/uploadcare.full.min.js"></script>
-    <script>
-        UPLOADCARE_PUBLIC_KEY = '0eac30b06d6fb00f6528';
-    </script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        UPLOADCARE_PUBLIC_KEY = '0eac30b06d6fb00f6528'; ( // Change this key with your upload care public key)
+    </script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -19,30 +19,38 @@
             grid-template-columns: repeat(2, 1fr);
             gap: 10px;
             width: 400px;
-            height: 100%;
             border: 2px solid #333;
             margin: 20px auto;
-            position: relative;
-            overflow: hidden;
-            background: #f0f0f0;
+            padding: 10px;
+            background: #f9f9f9;
         }
         .collage-item {
             width: 100%;
-            height: 100%;
+            height: auto;
+            max-height: 150px;
             object-fit: cover;
             cursor: grab;
-            position: relative;
             user-select: none;
+        }
+        #merged-image-link {
+            display: block;
+            margin-top: 10px;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
 
     <h2>Upload Multiple Photos for Collage</h2>
+    
     <div class="image-preview-multiple">
         <input type="hidden" role="uploadcare-uploader" data-multiple="true" data-images-only="true" id="uploadcare-widget" />
         <div id="collage" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
     </div>
+
+    <div onclick="mergeImages()">upload Final Image</div>
+
+    
 
     <script>
         $(function () {
@@ -58,12 +66,13 @@
                 if (fileGroup) {
                     $.when.apply(null, fileGroup.files()).done(function () {
                         $.each(arguments, function (i, fileInfo) {
-                            var src = fileInfo.cdnUrl + "-/scale_crop/160x160/center/";
+                            var src = fileInfo.cdnUrl;
                             var img = $("<img/>", {
                                 src: src,
                                 class: "collage-item",
                                 draggable: true,
                                 id: "img-" + i,
+                                crossOrigin: "anonymous",
                                 ondragstart: "drag(event)"
                             });
                             list.append(img);
@@ -94,13 +103,91 @@
                 var targetIndex = allImages.indexOf(targetElement);
 
                 if (draggedIndex < targetIndex) {
-                    // Moving right → Insert AFTER
                     targetElement.insertAdjacentElement('afterend', draggedElement);
                 } else {
-                    // Moving left → Insert BEFORE (default)
                     targetElement.insertAdjacentElement('beforebegin', draggedElement);
                 }
             }
+        }
+
+        function mergeImages() {
+            var collageContainer = document.getElementById("collage");
+            var images = collageContainer.getElementsByTagName("img");
+            var canvas = document.createElement("canvas");
+            var ctx = canvas.getContext("2d");
+
+            if (images.length === 0) {
+                alert("Please upload some images first!");
+                return;
+            }
+
+            canvas.width = 400;
+            canvas.height = 400;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            var gridSize = Math.ceil(Math.sqrt(images.length));
+            var imgSize = canvas.width / gridSize;
+
+            let loadedImages = 0;
+
+            for (let i = 0; i < images.length; i++) {
+                let img = new Image();
+                img.crossOrigin = "anonymous";
+                img.src = images[i].src;
+
+                img.onload = function () {
+                    var x = (i % gridSize) * imgSize;
+                    var y = Math.floor(i / gridSize) * imgSize;
+                    ctx.drawImage(img, x, y, imgSize, imgSize);
+
+                    loadedImages++;
+                    if (loadedImages === images.length) {
+                        var mergedImageData = canvas.toDataURL("image/png");
+
+                        // Convert Data URL to File and Set it in Input Field
+                        dataURLtoFile(mergedImageData, "merged_image.png");
+
+                        // Set Download Link
+                        setDownloadLink(mergedImageData, "merged_image.png");
+                    }
+                };
+
+                img.onerror = function () {
+                    console.error("Failed to load image:", images[i].src);
+                };
+            }
+        }
+
+        function dataURLtoFile(dataurl, filename) {
+            var arr = dataurl.split(","),
+                mime = arr[0].match(/:(.*?);/)[1],
+                bstr = atob(arr[1]),
+                n = bstr.length,
+                u8arr = new Uint8Array(n);
+
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+
+            var file = new File([u8arr], filename, { type: mime });
+
+            // Set the file into input field
+            var inputElement = document.getElementById("custom_image");
+
+            // Creating a DataTransfer object to assign the file to input
+            var dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            inputElement.files = dataTransfer.files;
+
+            console.log("Merged image added to input field!");
+        }
+
+        function setDownloadLink(imageData, filename) {
+            var link = document.getElementById("merged-image-link");
+            link.href = imageData;
+            link.download = filename;
+            link.textContent = filename;
+            link.style.display = "none";
         }
     </script>
 
