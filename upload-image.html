@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uploadcare Photo Collage</title>
+    <script src="https://ucarecdn.com/libs/widget/3.x/uploadcare.full.min.js"></script>
+    <script>
+        UPLOADCARE_PUBLIC_KEY = '0eac30b06d6fb00f6528';
+    </script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #collage {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            width: 400px;
+            height: 100%;
+            border: 2px solid #333;
+            margin: 20px auto;
+            position: relative;
+            overflow: hidden;
+            background: #f0f0f0;
+        }
+        .collage-item {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: grab;
+            position: relative;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Upload Multiple Photos for Collage</h2>
+    <div class="image-preview-multiple">
+        <input type="hidden" role="uploadcare-uploader" data-multiple="true" data-images-only="true" id="uploadcare-widget" />
+        <div id="collage" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+    </div>
+
+    <script>
+        $(function () {
+            installWidgetPreviewMultiple(
+                uploadcare.MultipleWidget($('#uploadcare-widget')),
+                $('#collage')
+            );
+        });
+
+        function installWidgetPreviewMultiple(widget, list) {
+            widget.onChange(function (fileGroup) {
+                list.empty();
+                if (fileGroup) {
+                    $.when.apply(null, fileGroup.files()).done(function () {
+                        $.each(arguments, function (i, fileInfo) {
+                            var src = fileInfo.cdnUrl + "-/scale_crop/160x160/center/";
+                            var img = $("<img/>", {
+                                src: src,
+                                class: "collage-item",
+                                draggable: true,
+                                id: "img-" + i,
+                                ondragstart: "drag(event)"
+                            });
+                            list.append(img);
+                        });
+                    });
+                }
+            });
+        }
+
+        function allowDrop(event) {
+            event.preventDefault();
+        }
+
+        function drag(event) {
+            event.dataTransfer.setData("text", event.target.id);
+        }
+
+        function drop(event) {
+            event.preventDefault();
+            var draggedId = event.dataTransfer.getData("text");
+            var draggedElement = document.getElementById(draggedId);
+            var targetElement = event.target;
+
+            if (targetElement.classList.contains("collage-item")) {
+                var collageContainer = document.getElementById("collage");
+                collageContainer.insertBefore(draggedElement, targetElement);
+            }
+        }
+    </script>
+
+</body>
+</html>
