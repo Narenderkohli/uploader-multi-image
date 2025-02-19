@@ -87,9 +87,19 @@
             var draggedElement = document.getElementById(draggedId);
             var targetElement = event.target;
 
-            if (targetElement.classList.contains("collage-item")) {
+            if (targetElement.classList.contains("collage-item") && draggedElement !== targetElement) {
                 var collageContainer = document.getElementById("collage");
-                collageContainer.insertBefore(draggedElement, targetElement);
+                var allImages = Array.from(collageContainer.children);
+                var draggedIndex = allImages.indexOf(draggedElement);
+                var targetIndex = allImages.indexOf(targetElement);
+
+                if (draggedIndex < targetIndex) {
+                    // Moving right → Insert AFTER
+                    targetElement.insertAdjacentElement('afterend', draggedElement);
+                } else {
+                    // Moving left → Insert BEFORE (default)
+                    targetElement.insertAdjacentElement('beforebegin', draggedElement);
+                }
             }
         }
     </script>
